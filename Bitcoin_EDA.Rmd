@@ -1,0 +1,51 @@
+---
+title: "Bitcoin EDA"
+author: "Devin Basley"
+date: "2024-04-01"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+ 
+# Bitcoin EDA
+
+
+## Load Data
+```{r}
+bitcoin_history <- read.csv("~/Downloads/Time Series/Cryptocurrency_Forecast/bitcoin_history.csv")
+
+
+```
+
+
+# Convert Bitcoin close price to TS
+
+```{r}
+
+bitcoin_close <- ts(bitcoin_history$close)
+
+```
+
+
+# Plot Bitcoin Close Price 
+
+```{r}
+
+plot(bitcoin_close)
+
+```
+
+# Close Price ACF and PACF
+
+```{r}
+
+
+acf(bitcoin_close)
+pacf(bitcoin_close)
+
+```
+
+
