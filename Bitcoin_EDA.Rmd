@@ -9,6 +9,15 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
+# Hypotheses
+
+1. Bitcoin Close Price will continue to increase by March 2026
+
+2. Smaller/Other Cryptocurrencies follow the performance of Bitcoin
+
+3. Bitcoin Log Returns follow volatility clustering
+ 
  
 # Bitcoin EDA
 
@@ -21,20 +30,26 @@ bitcoin_history <- read.csv("~/Downloads/Time Series/Cryptocurrency_Forecast/bit
 ```
 
 
-# Convert Bitcoin close price to TS
+# Convert Bitcoin close price to TS and log Returns
 
 ```{r}
 
 bitcoin_close <- ts(bitcoin_history$close)
 
+bitcoin_log_return <- diff(log(bitcoin_history$close))
+
+bitcoin_log_return <- ts(bitcoin_log_return)
+
 ```
 
 
-# Plot Bitcoin Close Price 
+# Plot Bitcoin Close Price and Log Returns
 
 ```{r}
 
 plot(bitcoin_close)
+
+plot(bitcoin_log_return)
 
 ```
 
@@ -45,6 +60,97 @@ plot(bitcoin_close)
 
 acf(bitcoin_close)
 pacf(bitcoin_close)
+
+
+
+
+```
+
+
+# Bitcoin Log Returns ACF and PACF plots
+
+```{r}
+par(mfrow=c(2,2))
+acf(bitcoin_log_return, main = "ACF of Bitcoin Log Return")
+pacf(bitcoin_log_return, main = "PACF of Bitcoin Log Return")
+acf(bitcoin_log_return^2, main = "ACF of Bitcoin Log Return Squared")
+pacf(bitcoin_log_return^2, main = "PACF of Bitcoin Log Return Squared")
+
+
+
+```
+
+# ARMA Model
+
+```{r}
+
+library(forecast)
+
+
+
+
+returns_arma <- auto.arima(bitcoin_log_return^2, max.p = 5, max.q = 5, 
+                  max.order = 10, stationary = T, 
+                  seasonal = F, trace = T, stepwise = F, 
+                  approximation = F)
+
+```
+
+# Bitcoin Squared Log Returns Residuals Checks
+
+```{r}
+
+# Fit ARMA(3,0,3) model
+arma_model <- arima(bitcoin_log_return^2, order=c(3,0,3))
+residuals_arma <- residuals(arma_model)
+
+# Squared residuals
+squared_residuals <- residuals_arma^2
+
+# ACF and PACF plots
+acf_sqr_residuals <- acf(squared_residuals, main = "ACF of Log Returns Squared Residuals")
+pacf_sqr_residuals <- pacf(squared_residuals, main = "PACF of Log Returns Squared Residuals")
+
+
+```
+
+
+# Bitcoin Returns GARCH Model
+
+```{r}
+
+library(fGarch)
+library(xts)
+
+# Define GARCH model 
+garch_fit <- garchFit(~garch(1, 1), 
+                        data = bitcoin_log_return)
+
+
+gfit_parameters <- (garch_fit@fit)$matcoe
+
+gfit_parameters
+
+
+# Summarize the model
+summary(garch_fit)
+
+# Plot Garch Model
+#plot(garch_fit, which = 1)
+plot(garch_fit, which = 2)
+
+
+```
+
+
+# Visualize GARCH fit Bitcoin Log Returns
+
+```{r}
+
+std_t <- garch_fit@sigma.t
+
+plot(bitcoin_log_return, main = "Envelope based on GARCH(1,1)")
+lines(std_t, col = "skyblue", pch = 30)
 
 ```
 
