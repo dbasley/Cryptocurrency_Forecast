@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Hypotheses
 
-1. Bitcoin Close Price will continue to increase by March 2026
+1. Bitcoin Close Price will continue to increase by end of 2024, and March 2026
 
 2. Smaller/Other Cryptocurrencies follow the performance of Bitcoin
 
@@ -24,24 +24,103 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Load Data
 ```{r}
-bitcoin_history <- read.csv("~/Downloads/Time Series/Cryptocurrency_Forecast/bitcoin_history.csv")
+bitcoin <- read.csv("~/Downloads/Time Series/Cryptocurrency_Forecast/bitcoin_history.csv")
+
+smaller_crypto <- read.csv("~/Downloads/Time Series/Cryptocurrency_Forecast/smaller_crypto.csv")
+
+bnb <- smaller_crypto %>%
+  filter(name == "BNB")
+
+ethereum <- smaller_crypto %>%
+  filter(name == "Ethereum")
 
 
 ```
 
 
-# Convert Bitcoin close price to TS and log Returns
+# Convert Bitcoin, BNB, Ethereum log close price to TS
 
 ```{r}
 
-bitcoin_close <- ts(bitcoin_history$close)
+bitcoin_close <- ts(log(bitcoin$close), start = c(2015,1), end = c(2023,12), frequency = 365)
+bnb_close <- ts(log(bnb$close), start = c(2017, 1), end = c(2023,12), frequency = 365)
+ethereum_close <- ts(log(ethereum$close), start = c(2015, 1), end = c(2023,12), frequency = 365)
 
-bitcoin_log_return <- diff(log(bitcoin_history$close))
+time1 <- time(ts(start = c(2015, 1), end = c(2023, 12), frequency = 365))
+time2 <- time(ts(start = c(2017, 1), end = c(2023, 12), frequency = 365))
 
-bitcoin_log_return <- ts(bitcoin_log_return)
+
+plot(bitcoin_close, col = "black", ylim = c(0,15), 
+     xlab = "Date", 
+     ylab = "Logged Coin Close Price", 
+     main = "Cryptocurrency Logged Close Price Over Time")
+lines(bnb_close, col = "skyblue")
+lines(ethereum_close, col = "red")
+legend("topleft", 
+       legend = c("Bitcoin", "BNB", "Ethereum"), 
+       col = c("black", "skyblue", "red"), lty = 1)
+
 
 ```
 
+
+# Detrended Linear Regression Model
+
+```{r}
+bitcoin_lm_fit <- lm(bitcoin_close ~ time1, data = bitcoin)
+bitcoin_detrend <- bitcoin_close - fitted(bitcoin_lm_fit)
+
+
+
+bnb_lm_fit <- lm(bnb_close ~ time2, data = bnb)
+bnb_detrend <- bnb_close - fitted(bnb_lm_fit)
+
+ether_lm_fit <- lm(ethereum_close ~ time1, data = ethereum)
+ether_detrend <- ethereum_close - fitted(ether_lm_fit)
+
+par(mfrow = c(3,1))
+plot(bitcoin_detrend)
+plot(bnb_detrend)
+plot(ether_detrend)
+
+```
+
+
+
+
+
+# Vector AR Model
+
+```{r}
+library(vars)
+
+detrend_crypto <- data.frame(bitcoin_detrend, ether_detrend)
+
+var_analysis <- VARselect(detrend_crypto, type = "none")
+
+var_analysis$selection
+
+crypto_var <- VAR(detrend_crypto, type = "none", p = 1)
+
+summary(crypto_var)
+
+```
+
+
+
+
+
+
+# Bitcoin Log Returns
+
+```{r}
+
+bitcoin_log_return <- diff(log(bitcoin$close))
+
+bitcoin_log_return <- ts(bitcoin_log_return)
+
+
+```
 
 # Plot Bitcoin Close Price and Log Returns
 
