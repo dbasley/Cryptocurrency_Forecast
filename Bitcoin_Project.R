@@ -5,11 +5,13 @@ library(tidyverse)
 list_coins<-crypto_list()
 
 # Cryptos we want to compare to bitcoin
-included_crypto <- c("Litecoin", "XRP", "Ethereum")
+included_crypto <- c("BNB", "Ethereum")
 
 # Filter for wanted cryptocurrencies
 filtered_coins <- list_coins %>%
   filter(name %in% included_crypto)
+
+table(filtered_coins$name)
 
 
 
