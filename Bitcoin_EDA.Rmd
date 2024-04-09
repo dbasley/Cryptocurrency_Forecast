@@ -42,12 +42,12 @@ ethereum <- smaller_crypto %>%
 
 ```{r}
 
-bitcoin_close <- ts(log(bitcoin$close), start = c(2015,1), end = c(2023,12), frequency = 365)
+bitcoin_close <- ts(log(bitcoin$close), start = c(2017,1), end = c(2023,12), frequency = 365)
 bnb_close <- ts(log(bnb$close), start = c(2017, 1), end = c(2023,12), frequency = 365)
-ethereum_close <- ts(log(ethereum$close), start = c(2015, 1), end = c(2023,12), frequency = 365)
+ethereum_close <- ts(log(ethereum$close), start = c(2017, 1), end = c(2023,12), frequency = 365)
 
-time1 <- time(ts(start = c(2015, 1), end = c(2023, 12), frequency = 365))
-time2 <- time(ts(start = c(2017, 1), end = c(2023, 12), frequency = 365))
+time1 <- time(ts(start = c(2017, 1), end = c(2023, 12), frequency = 365))
+#time2 <- time(ts(start = c(2017, 1), end = c(2023, 12), frequency = 365))
 
 
 plot(bitcoin_close, col = "black", ylim = c(0,15), 
@@ -72,7 +72,7 @@ bitcoin_detrend <- bitcoin_close - fitted(bitcoin_lm_fit)
 
 
 
-bnb_lm_fit <- lm(bnb_close ~ time2, data = bnb)
+bnb_lm_fit <- lm(bnb_close ~ time1, data = bnb)
 bnb_detrend <- bnb_close - fitted(bnb_lm_fit)
 
 ether_lm_fit <- lm(ethereum_close ~ time1, data = ethereum)
@@ -94,7 +94,7 @@ plot(ether_detrend)
 ```{r}
 library(vars)
 
-detrend_crypto <- data.frame(bitcoin_detrend, ether_detrend)
+detrend_crypto <- data.frame(bitcoin_detrend, bnb_detrend, ether_detrend)
 
 var_analysis <- VARselect(detrend_crypto, type = "none")
 
@@ -126,7 +126,8 @@ bitcoin_log_return <- ts(bitcoin_log_return)
 
 ```{r}
 
-plot(bitcoin_close)
+plot(bitcoin_close, main = 
+       'Close Price Bitcoin')
 
 plot(bitcoin_log_return)
 
@@ -202,7 +203,11 @@ library(fGarch)
 library(xts)
 
 # Define GARCH model 
-garch_fit <- garchFit(~garch(1, 1), 
+garch_fit <- garchFit(~garch(1, 3), 
+                        data = bitcoin_log_return)
+garch_fit2 <- garchFit(~garch(2, 3), 
+                        data = bitcoin_log_return)
+garch_fit3 <- garchFit(~garch(3, 3), 
                         data = bitcoin_log_return)
 
 
@@ -213,10 +218,12 @@ gfit_parameters
 
 # Summarize the model
 summary(garch_fit)
+summary(garch_fit2)
+summary(garch_fit3)
 
 # Plot Garch Model
 #plot(garch_fit, which = 1)
-plot(garch_fit, which = 2)
+plot(garch_fit3, which = 2)
 
 
 ```
@@ -226,9 +233,9 @@ plot(garch_fit, which = 2)
 
 ```{r}
 
-std_t <- garch_fit@sigma.t
+std_t <- garch_fit3@sigma.t
 
-plot(bitcoin_log_return, main = "Envelope based on GARCH(1,1)")
+plot(bitcoin_log_return, main = "Envelope based on GARCH(3,3)")
 lines(std_t, col = "skyblue", pch = 30)
 
 ```
