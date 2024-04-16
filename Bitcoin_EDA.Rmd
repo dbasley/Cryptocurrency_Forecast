@@ -24,6 +24,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Load Data
 ```{r}
+
+library(tidyverse)
 bitcoin <- read.csv("~/Downloads/Time Series/Cryptocurrency_Forecast/bitcoin_history.csv")
 
 smaller_crypto <- read.csv("~/Downloads/Time Series/Cryptocurrency_Forecast/smaller_crypto.csv")
@@ -50,12 +52,22 @@ time1 <- time(ts(start = c(2017, 1), end = c(2023, 12), frequency = 365))
 #time2 <- time(ts(start = c(2017, 1), end = c(2023, 12), frequency = 365))
 
 
-plot(bitcoin_close, col = "black", ylim = c(0,15), 
+plot(bitcoin_close, col = "black", 
+     xlab = "Date", 
+     ylab = "Bitcoin Close Price", 
+     main = "Bitcoin Close Price From 2017-2023")
+
+par(mfrow=c(1,2))
+acf(bitcoin$close, lag.max = 2000, main= "ACF plot of bitcoin")
+pacf(bitcoin_close, lag = 2000, main="PACF plot of bitcoin")
+
+
+plot(log(bitcoin_close), col = "black", ylim = c(0,15), 
      xlab = "Date", 
      ylab = "Logged Coin Close Price", 
      main = "Cryptocurrency Logged Close Price Over Time")
-lines(bnb_close, col = "skyblue")
-lines(ethereum_close, col = "red")
+lines(log(bnb_close), col = "skyblue")
+lines(log(ethereum_close), col = "red")
 legend("topleft", 
        legend = c("Bitcoin", "BNB", "Ethereum"), 
        col = c("black", "skyblue", "red"), lty = 1)
@@ -67,16 +79,16 @@ legend("topleft",
 # Detrended Linear Regression Model
 
 ```{r}
-bitcoin_lm_fit <- lm(bitcoin_close ~ time1, data = bitcoin)
-bitcoin_detrend <- bitcoin_close - fitted(bitcoin_lm_fit)
+bitcoin_lm_fit <- lm(diff(bitcoin_close) ~ diff(time1), data = bitcoin)
+bitcoin_detrend <- diff(bitcoin_close) - fitted(bitcoin_lm_fit)
 
 
 
-bnb_lm_fit <- lm(bnb_close ~ time1, data = bnb)
-bnb_detrend <- bnb_close - fitted(bnb_lm_fit)
+bnb_lm_fit <- lm(diff(bnb_close) ~ diff(time1), data = bnb)
+bnb_detrend <- diff(bnb_close) - fitted(bnb_lm_fit)
 
-ether_lm_fit <- lm(ethereum_close ~ time1, data = ethereum)
-ether_detrend <- ethereum_close - fitted(ether_lm_fit)
+ether_lm_fit <- lm(diff(ethereum_close) ~ diff(time1), data = ethereum)
+ether_detrend <- diff(ethereum_close) - fitted(ether_lm_fit)
 
 par(mfrow = c(3,1))
 plot(bitcoin_detrend)
@@ -115,9 +127,9 @@ summary(crypto_var)
 
 ```{r}
 
-bitcoin_log_return <- diff(log(bitcoin$close))
+bitcoin_log_return <- diff(bitcoin_close)
 
-bitcoin_log_return <- ts(bitcoin_log_return)
+bitcoin_log_return <- ts(bitcoin_log_return, start = c(2017,1), end = c(2023,12), frequency = 365)
 
 
 ```
@@ -129,7 +141,8 @@ bitcoin_log_return <- ts(bitcoin_log_return)
 plot(bitcoin_close, main = 
        'Close Price Bitcoin')
 
-plot(bitcoin_log_return)
+plot(bitcoin_log_return, main = "Bitcoin Detrended",
+     ylab = "Difference and Logged Bitcoin Close Price")
 
 ```
 
@@ -158,6 +171,7 @@ pacf(bitcoin_log_return^2, main = "PACF of Bitcoin Log Return Squared")
 
 
 
+
 ```
 
 # ARMA Model
@@ -165,7 +179,6 @@ pacf(bitcoin_log_return^2, main = "PACF of Bitcoin Log Return Squared")
 ```{r}
 
 library(forecast)
-
 
 
 
@@ -183,6 +196,9 @@ returns_arma <- auto.arima(bitcoin_log_return^2, max.p = 5, max.q = 5,
 # Fit ARMA(3,0,3) model
 arma_model <- arima(bitcoin_log_return^2, order=c(3,0,3))
 residuals_arma <- residuals(arma_model)
+
+acf(residuals_arma)
+pacf(residuals_arma)
 
 # Squared residuals
 squared_residuals <- residuals_arma^2
@@ -224,6 +240,7 @@ summary(garch_fit3)
 # Plot Garch Model
 #plot(garch_fit, which = 1)
 plot(garch_fit3, which = 2)
+plot(garch_fit3, which = 7)
 
 
 ```
@@ -235,9 +252,31 @@ plot(garch_fit3, which = 2)
 
 std_t <- garch_fit3@sigma.t
 
-plot(bitcoin_log_return, main = "Envelope based on GARCH(3,3)")
-lines(std_t, col = "skyblue", pch = 30)
+std_t
+
+plot(ts(bitcoin_log_return), main = "Conditional SD on Actual Bitcoin Data",
+     ylab = "Bitcoin Log Return")
+lines(garch_fit3@sigma.t, col = "skyblue", pch = 30)
 
 ```
 
 
+# Forecast Bitcoin
+
+```{r}
+
+library(rugarch)
+
+model.7 <- ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(3, 3)), 
+                      mean.model = list(armaOrder = c(3, 3), include.mean = FALSE), 
+                      distribution.model = "norm")
+m.56_32 <- ugarchfit(spec = model.7, data = ts(bitcoin_log_return), out.sample = 200)
+m.56_32
+
+
+forc.56_22 = ugarchforecast(m.56_32, data = ts(bitcoin_log_return), n.ahead = 90, n.roll = 90)
+plot(forc.56_22, which = "all")
+
+forc.56_22
+
+```
