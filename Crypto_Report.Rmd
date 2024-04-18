@@ -1,0 +1,197 @@
+---
+title: "Cryptocurrency Report"
+author: "Devin Basley"
+date: "2024-04-18"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+library(tidyverse)
+library(vars)
+library(forecast)
+library(tseries)
+library(fGarch)
+library(rugarch)
+
+
+bitcoin <- read.csv("~/Downloads/Time Series/Cryptocurrency_Forecast/bitcoin_history.csv")
+
+smaller_crypto <- read.csv("~/Downloads/Time Series/Cryptocurrency_Forecast/smaller_crypto.csv")
+
+bnb <- smaller_crypto %>%
+  filter(name == "BNB")
+
+ethereum <- smaller_crypto %>%
+  filter(name == "Ethereum")
+
+
+```
+
+
+# Introduction
+
+
+# Methodology
+
+## Data
+
+The data was obtained using the crypto2 package in R. This package pulls daily cryptocurrency data from coinmarketcap.com. Our Bitcoin data consists of daily prices from January 2015 to March 27th, 2024. We also pulled data for Ethereum from its creation in August 2015 to March 27th, 2024. The last cryptocurrency we looked at is Binance Coin (BNB). For BNB, we pulled data from its creation in July 2017 to March 27th, 2024. 
+
+Before doing analysis on these time series, we filtered the data so that all 3 coins had the same starting month and ending day. In this case, the data we analyzed was from July 1st, 2017 to Decemeber 31st, 2023. 
+
+Each of these datsets contain the same variables with can be seen in the table below.
+
+### Table 1
+```{r}
+
+names(bitcoin)[names(bitcoin) == "open"] <- "Open"
+names(bitcoin)[names(bitcoin) == "close"] <- "Close"
+names(bitcoin)[names(bitcoin) == "name"] <- "Name"
+names(bitcoin)[names(bitcoin) == "timestamp"] <- "Date"
+names(bitcoin)[names(bitcoin) == "volume"] <- "Volume"
+names(bitcoin)[names(bitcoin) == "market_cap"] <- "Market Cap"
+
+bitcoin <- bitcoin %>%
+  dplyr::select(c(Open, Close, Name, Date,
+                  Volume, `Market Cap`))
+
+
+knitr::kable(head(bitcoin))
+
+```
+
+
+## EDA
+
+First, we plotted the time series of Bitcoin, Ethereum, and BNB. 
+
+### Figure 1
+```{r, include=FALSE}
+
+plot(ts(bitcoin$Close, start = c(2017,1), end = c(2023,12), frequency = 365), 
+     main = "Cryptocurrency Daily Close Price 2017-2023",
+     ylab = "Close Price",
+     xlab = "Date")
+lines(ts(bnb$close, start = c(2017, 1), end = c(2023,12), frequency = 365), col = "skyblue")
+lines(ts(ethereum$close, start = c(2017, 1), end = c(2023,12), frequency = 365), col = "red")
+legend("topleft", 
+       legend = c("Bitcoin", "BNB", "Ethereum"), 
+       col = c("black", "skyblue", "red"), lty = 1)
+```
+
+From this plot we can see that Bitcoin is not stationary. Bitcoin daily close price has an upward trend indicating an increasing mean and non-constant variance. We also notice that the Ethereum close price and BNB close price are difficult to see any trends or price fluctuations because of the large difference in price with Bitcoin. 
+
+Due to Bitcoin's non-stationary characteristics and the inability to see characteristics in the Ethereum and BNB time series, we took the log transformation as seen in the plot below.
+
+### Figure 2
+```{r, include=FALSE}
+
+plot(ts(log(bitcoin$Close), start = c(2017,1), end = c(2023,12), frequency = 365), 
+     main = "Crytpocurrency Daily Log Close Price 2017-2023",
+     ylab = "Log Close Price",
+     xlab = "Date",
+     ylim = c(0,15))
+lines(ts(log(bnb$close), start = c(2017, 1), end = c(2023,12), frequency = 365), col = "skyblue")
+lines(ts(log(ethereum$close), start = c(2017, 1), end = c(2023,12), frequency = 365), col = "red")
+legend("topleft", 
+       legend = c("Bitcoin", "BNB", "Ethereum"), 
+       col = c("black", "skyblue", "red"), lty = 1)
+```
+
+After taking the log transformation of each of the cryptocurrencies, we can better see the characteristics of each coin over this time period. Here, we can still see an up trend in Bitcoin indicating an increasing mean. We still also see some non-constant variance in Bitcoin.
+
+We can also see that Ethereum and Bitcoin follow these similar trends as Bitcoin with uptrends indicating their own increasing means, respectively, as well as their own non-constant variance.
+
+To ensure what we see in the Figure 2, we performed an Augments Dickey-Fuller Test for non-stationarity as seen below.
+
+### Table 2
+```{r}
+adf_result1 <- adf.test(ts(log(bitcoin$Close), start = c(2017,1), end = c(2023,12), frequency = 365))
+adf_result2 <- adf.test(ts(log(ethereum$close), start = c(2017,1), end = c(2023,12), frequency = 365))
+adf_result3 <- adf.test(ts(log(bnb$close), start = c(2017,1), end = c(2023,12), frequency = 365))
+
+
+# Create a summary table
+summary_table <- data.frame(
+  Test = rep("Augmented Dickey-Fuller Test", 3),
+  Test_Statistic = c(adf_result1$statistic, adf_result2$statistic, adf_result3$statistic),
+  P_Value = c(adf_result1$p.value, adf_result2$p.value, adf_result3$p.value),
+  Lag_Used = c(adf_result1$parameter, adf_result2$parameter, adf_result3$parameter),
+  Critical_Values = paste(adf_result1$critical, collapse = ", "),
+  StringsAsFactors = FALSE
+)
+
+# Print the summary table using kable
+knitr::kable(summary_table, align = "c", caption = "Summary of Augmented Dickey-Fuller Test")
+
+
+```
+
+
+The Augmented Dickey-Fuller test confirmed what we believed from Figure 2. We failed to reject our null hypothesis, indicating we do not have sufficient evidence to say the log transformation of Bitcoin, Ethereum, and BNB are stationary.
+
+In order to transform these crypto coins into stationary time series, we differenced them by a single lag. This is also the same as saying, we computed the log returns of Bitcoin, Ethereum, and BNB.
+
+
+### Figure 3
+```{r, include=FALSE}
+par(mfrow = c(3,1))
+plot(ts(diff(log(bitcoin$Close)), start = c(2017,1), end = c(2023,12), frequency = 365), 
+     main = "Crytpocurrency Log Returns 2017-2023",
+     ylab = "Bitcoin Log Returns",
+     xlab = "Date")
+plot(ts(diff(log(bnb$close)), start = c(2017, 1), end = c(2023,12), frequency = 365),
+     ylab = "BNB Log Returns",
+     xlab = "Date")
+plot(ts(diff(log(ethereum$close)), start = c(2017, 1), end = c(2023,12), frequency = 365),
+     ylab = "Ethereum Log Returns",
+     xlab = "Date")
+# legend("topleft", 
+#        legend = c("Bitcoin", "BNB", "Ethereum"), 
+#        col = c("black", "skyblue", "red"), lty = 1)
+```
+
+After computing the log returns, we can see in Figure 3 that the upward trend has been removed for each of the coins. From looking at Figure 3, it appears that we have achieved stationarity, but it is not obvious. In Bitcoin, there does still appear to be some non-constant variance throughout. In BNB, there appears to be non-constant variance near 2017-2018, but then becomes constant in the following years. Ethereum, similar to Bitcoin, in which it appears to have some non-constant variance throughout the time period. We will again use the Augmented Dickey-Fuller Test to assess stationarity.
+
+### Table 3
+```{r}
+adf_result4 <- adf.test(ts(diff(log(bitcoin$Close)), start = c(2017,1), end = c(2023,12), frequency = 365))
+adf_result5 <- adf.test(ts(diff(log(ethereum$close)), start = c(2017,1), end = c(2023,12), frequency = 365))
+adf_result6 <- adf.test(ts(diff(log(bnb$close)), start = c(2017,1), end = c(2023,12), frequency = 365))
+
+
+# Create a summary table
+summary_table <- data.frame(
+  Test = rep("Augmented Dickey-Fuller Test", 3),
+  Test_Statistic = c(adf_result4$statistic, adf_result5$statistic, adf_result6$statistic),
+  P_Value = c(adf_result4$p.value, adf_result5$p.value, adf_result6$p.value),
+  Lag_Used = c(adf_result4$parameter, adf_result5$parameter, adf_result6$parameter),
+  Critical_Values = paste(adf_result1$critical, collapse = ", "),
+  StringsAsFactors = FALSE
+)
+
+# Print the summary table using kable
+knitr::kable(summary_table, align = "c", caption = "Summary of Augmented Dickey-Fuller Test")
+
+
+```
+
+
+From Table 3, the log returns of each coin very small p-values indicating we can reject our null hypothesis. We do have sufficient evidence that our log returns are stationary.
+
+## ARIMA Model Fit
+
+## Vector AR Analysis
+
+## Diagnostics
+
+
+# Results
+
+
+
+# Discussion
