@@ -92,16 +92,16 @@ legend("topleft",
 # Detrended Linear Regression Model
 
 ```{r}
-bitcoin_lm_fit <- lm(bitcoin_close ~ time1, data = bitcoin)
-bitcoin_detrend <- bitcoin_close - fitted(bitcoin_lm_fit)
+bitcoin_lm_fit <- lm(diff(bitcoin_close) ~ diff(time1), data = bitcoin)
+bitcoin_detrend <- diff(bitcoin_close) - fitted(bitcoin_lm_fit)
 
 
 
-bnb_lm_fit <- lm(bnb_close ~ time1, data = bnb)
-bnb_detrend <- bnb_close - fitted(bnb_lm_fit)
+bnb_lm_fit <- lm(diff(bnb_close) ~ diff(time1), data = bnb)
+bnb_detrend <- diff(bnb_close) - fitted(bnb_lm_fit)
 
-ether_lm_fit <- lm(ethereum_close ~ time1, data = ethereum)
-ether_detrend <- ethereum_close - fitted(ether_lm_fit)
+ether_lm_fit <- lm(diff(ethereum_close) ~ diff(time1), data = ethereum)
+ether_detrend <- diff(ethereum_close) - fitted(ether_lm_fit)
 
 par(mfrow = c(3,1))
 plot(bitcoin_detrend)
@@ -128,6 +128,14 @@ var_analysis$selection
 crypto_var <- VAR(detrend_crypto, type = "none", p = 1)
 
 summary(crypto_var)
+
+# Granger Causality Test
+granger_test1 <- causality(crypto_var, cause = "bitcoin_detrend")
+granger_test2 <- causality(crypto_var, cause = "bnb_detrend")
+granger_test3 <- causality(crypto_var, cause = "ether_detrend")
+
+
+granger_test1
 
 
 forecasted <- predict(crypto_var, n.ahead = 85, ci = .95)
