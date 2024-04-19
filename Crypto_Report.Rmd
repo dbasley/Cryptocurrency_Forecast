@@ -1,5 +1,5 @@
 ---
-title: "Cryptocurrency Report"
+title: "Bitcoin's Impact on the Crypto Market"
 author: "Devin Basley and Shane Hauck"
 date: "2024-04-18"
 output: pdf_document
@@ -298,3 +298,33 @@ knitr::kable(var_analysis$selection, caption = "VAR Selection", align = "c")
 
 
 # Discussion
+
+The main takeaway from this analysis is that it is incredibly difficult to forecast the daily volatility of Bitcoin's log returns. Some areas of future work that may lead to improved forecast it to look at monthly or yearly returns as those will have largers log returns than daily returns. Another potential solution to better forecast Bitcoin's volatility would be to model it's volatility within a day such as a hourly forecast. Our Garch model would likely benefit from these changes, as well as provide valuable insights to cryptocurrency investors. 
+
+Another takeaway from analyzing Bitcoin's volatility would be to look at shorten the length of time within the dataset due to Bitcoin rapidly increasing and its extreme peaks and dips. This would help us get a more short term understanding of Bitcoin's volatility while excluding its extreme growth. 
+
+When analyzing the impact of Bitcoin's impact on Ethereum and BNB, we concluded that Bitcoin was not Granger Causal of the other coins. In post presentation discussion, it was noted that something to look at would be the instantaneous causality of the covariance matrix between the 3 coins, with the hypothesis being that Bitcoin would instantaneously causal of the other 2 coins. This would be an area of future work. While not necessarily surprising that Bitcoin was not Granger Casual of the other coin's, Bitcoin likely still has affects on other cryptocurrencies as it makes up 57% of the market (per per https://www.coinbase.com/explore). There are likely other confounding factors that led to this such as trading volume, market cap, and cryptocurrency sentiment. Information that could be useful is that Bitcoin is considered a storage of value coin whereas Ethereum and BNB are considered utility coins. Future work could be grouping storage of values coins together and utility coins together and analyzing how coins in those groups impact each other.
+
+
+# Appendix
+
+### ACF and PACF plots of Bitcoin's Daily Close Price
+```{r, echo=FALSE}
+
+par(mfrow=c(1,2))
+acf(bitcoin$Close, lag.max = 2000, main= "ACF plot of bitcoin")
+pacf(bitcoin$Close, lag = 2000, main="PACF plot of bitcoin")
+
+
+```
+
+### Bitcoin's current price against its previous day price
+```{r, echo=FALSE}
+
+plot(y = bitcoin_close,x = lag(as.vector(bitcoin_close)),
+     ylab = "Daily Close Price",
+     xlab = "Previous Daily Close Price",
+     main = "Bitcoin Close Price vs Previous Close Price")
+
+
+```
