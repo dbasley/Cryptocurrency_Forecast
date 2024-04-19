@@ -1,6 +1,6 @@
 ---
 title: "Cryptocurrency Report"
-author: "Devin Basley"
+author: "Devin Basley and Shane Hauck"
 date: "2024-04-18"
 output: pdf_document
 ---
@@ -31,9 +31,17 @@ ethereum <- smaller_crypto %>%
 
 ```
 
+# Executive Summary
+
+Within this report, we used daily cryptocurrency data to analyze Bitcoin's volatility within its log returns. We also looked at the affects of Bitcoin's volatility and its impact on the volatility of other cryptocurrencies such as Ethereum and Binance Coin. In order to measure and forecast Bitcoin's daily volatility, we built a GARCH(1,3) model, which produced poor forecasts at, or near 0 daily log returns for the first 10 days of January 2024. When analyzing Bitcoin's impact on Ethereum and BNB, we found no Granger Causality using a VAR(1) model on the log returns of the 3 coins.
 
 # Introduction
 
+The cryptocurrency market burst onto the scene in 2013, however it first appeared in 2009 when Bitcoin was created. Bitcoin has seen an incredible period of growth of growth over the past 10 years growing from approximately 300 USD to hitting its all time high just above 70,000 USD. Bitcoin is the largest coin and it is not particulary close. With a market cap of 1.3 trillion USD, the next closest coin is Ethereum with a market cap of 357.8 billion USD and Binance coin being 4th with a market cap of 80.8 billion USD, (per https://www.coinbase.com/explore as of 4/18). 
+
+The cryptocurrency market is now mainstream, but the market itself has some interesting characteristics. It is opens at 12am and closes at 11:59pm and weekends. This means that the market is available 24/7, not just within standard trading hours. Bitcoin's rise, as quick as it's been, has not been linear. It is wildly volatile and ever changing due to how the market is setup. For this reason, we will analyze Bitcoin's returns and attempt to forecast its volatility.
+
+Over this time Bitcoin has been known as the bellweather cryptocurrency, meaning if Bitcoin is rising, then most other coins are rising and vice versa for when Bitcoin decreases. We investigated if this is real or just an illusion to investors.
 
 # Methodology
 
@@ -45,8 +53,8 @@ Before doing analysis on these time series, we filtered the data so that all 3 c
 
 Each of these datsets contain the same variables with can be seen in the table below.
 
-### Table 1
-```{r}
+
+```{r, echo=FALSE}
 
 names(bitcoin)[names(bitcoin) == "open"] <- "Open"
 names(bitcoin)[names(bitcoin) == "close"] <- "Close"
@@ -55,12 +63,12 @@ names(bitcoin)[names(bitcoin) == "timestamp"] <- "Date"
 names(bitcoin)[names(bitcoin) == "volume"] <- "Volume"
 names(bitcoin)[names(bitcoin) == "market_cap"] <- "Market Cap"
 
-bitcoin <- bitcoin %>%
+bitcoin_head <- bitcoin %>%
   dplyr::select(c(Open, Close, Name, Date,
                   Volume, `Market Cap`))
 
 
-knitr::kable(head(bitcoin))
+knitr::kable(head(bitcoin_head), caption = "Cryptocurrency Dataset", align = "c")
 
 ```
 
@@ -70,7 +78,7 @@ knitr::kable(head(bitcoin))
 First, we plotted the time series of Bitcoin, Ethereum, and BNB. 
 
 ### Figure 1
-```{r, include=FALSE}
+```{r, echo=FALSE, warning=FALSE}
 
 plot(ts(bitcoin$Close, start = c(2017,1), end = c(2023,12), frequency = 365), 
      main = "Cryptocurrency Daily Close Price 2017-2023",
@@ -88,7 +96,7 @@ From this plot we can see that Bitcoin is not stationary. Bitcoin daily close pr
 Due to Bitcoin's non-stationary characteristics and the inability to see characteristics in the Ethereum and BNB time series, we took the log transformation as seen in the plot below.
 
 ### Figure 2
-```{r, include=FALSE}
+```{r, echo=FALSE, warning=FALSE}
 
 plot(ts(log(bitcoin$Close), start = c(2017,1), end = c(2023,12), frequency = 365), 
      main = "Crytpocurrency Daily Log Close Price 2017-2023",
@@ -108,8 +116,8 @@ We can also see that Ethereum and Bitcoin follow these similar trends as Bitcoin
 
 To ensure what we see in the Figure 2, we performed an Augments Dickey-Fuller Test for non-stationarity as seen below.
 
-### Table 2
-```{r}
+
+```{r, echo=FALSE, warning=FALSE}
 adf_result1 <- adf.test(ts(log(bitcoin$Close), start = c(2017,1), end = c(2023,12), frequency = 365))
 adf_result2 <- adf.test(ts(log(ethereum$close), start = c(2017,1), end = c(2023,12), frequency = 365))
 adf_result3 <- adf.test(ts(log(bnb$close), start = c(2017,1), end = c(2023,12), frequency = 365))
@@ -117,12 +125,11 @@ adf_result3 <- adf.test(ts(log(bnb$close), start = c(2017,1), end = c(2023,12), 
 
 # Create a summary table
 summary_table <- data.frame(
-  Test = rep("Augmented Dickey-Fuller Test", 3),
-  Test_Statistic = c(adf_result1$statistic, adf_result2$statistic, adf_result3$statistic),
-  P_Value = c(adf_result1$p.value, adf_result2$p.value, adf_result3$p.value),
-  Lag_Used = c(adf_result1$parameter, adf_result2$parameter, adf_result3$parameter),
-  Critical_Values = paste(adf_result1$critical, collapse = ", "),
-  StringsAsFactors = FALSE
+  Coin = c("Bitcoin", "Ethereum", "BNB"),
+  `Test Statistic` = c(adf_result1$statistic, adf_result2$statistic, adf_result3$statistic),
+  p_value = c(adf_result1$p.value, adf_result2$p.value, adf_result3$p.value),
+  `Lag Used` = c(adf_result1$parameter, adf_result2$parameter, adf_result3$parameter)
+
 )
 
 # Print the summary table using kable
@@ -132,13 +139,13 @@ knitr::kable(summary_table, align = "c", caption = "Summary of Augmented Dickey-
 ```
 
 
-The Augmented Dickey-Fuller test confirmed what we believed from Figure 2. We failed to reject our null hypothesis, indicating we do not have sufficient evidence to say the log transformation of Bitcoin, Ethereum, and BNB are stationary.
+The Augmented Dickey-Fuller test confirmed what we believed from Figure 2. We failed to reject our null hypothesis, indicating we do not have sufficient evidence to say the log transformation of Bitcoin and Ethereum are stationary. Interestingly, we can see the p-value of BNB is 0.01 indicating this time series is stationary in the log transformed form.
 
-In order to transform these crypto coins into stationary time series, we differenced them by a single lag. This is also the same as saying, we computed the log returns of Bitcoin, Ethereum, and BNB.
+In order to transform these crypto coins into stationary time series, we differenced them by a single lag. This is also the same as saying, we computed the log returns of Bitcoin, Ethereum, and BNB. We are noting BNB was statistically significant to be stationary in the log transformed form, however we still took a difference by a single lag.
 
 
 ### Figure 3
-```{r, include=FALSE}
+```{r, echo=FALSE}
 par(mfrow = c(3,1))
 plot(ts(diff(log(bitcoin$Close)), start = c(2017,1), end = c(2023,12), frequency = 365), 
      main = "Crytpocurrency Log Returns 2017-2023",
@@ -157,21 +164,20 @@ plot(ts(diff(log(ethereum$close)), start = c(2017, 1), end = c(2023,12), frequen
 
 After computing the log returns, we can see in Figure 3 that the upward trend has been removed for each of the coins. From looking at Figure 3, it appears that we have achieved stationarity, but it is not obvious. In Bitcoin, there does still appear to be some non-constant variance throughout. In BNB, there appears to be non-constant variance near 2017-2018, but then becomes constant in the following years. Ethereum, similar to Bitcoin, in which it appears to have some non-constant variance throughout the time period. We will again use the Augmented Dickey-Fuller Test to assess stationarity.
 
-### Table 3
-```{r}
+
+```{r, echo=FALSE, warning=FALSE}
 adf_result4 <- adf.test(ts(diff(log(bitcoin$Close)), start = c(2017,1), end = c(2023,12), frequency = 365))
 adf_result5 <- adf.test(ts(diff(log(ethereum$close)), start = c(2017,1), end = c(2023,12), frequency = 365))
 adf_result6 <- adf.test(ts(diff(log(bnb$close)), start = c(2017,1), end = c(2023,12), frequency = 365))
 
 
+
 # Create a summary table
 summary_table <- data.frame(
-  Test = rep("Augmented Dickey-Fuller Test", 3),
-  Test_Statistic = c(adf_result4$statistic, adf_result5$statistic, adf_result6$statistic),
-  P_Value = c(adf_result4$p.value, adf_result5$p.value, adf_result6$p.value),
-  Lag_Used = c(adf_result4$parameter, adf_result5$parameter, adf_result6$parameter),
-  Critical_Values = paste(adf_result1$critical, collapse = ", "),
-  StringsAsFactors = FALSE
+  Coin = c("Bitcoin", "Ethereum", "BNB"),
+  `Test Statistic` = c(adf_result4$statistic, adf_result5$statistic, adf_result6$statistic),
+  `p_value` = c(adf_result4$p.value, adf_result5$p.value, adf_result6$p.value),
+  `Lag Used` = c(adf_result4$parameter, adf_result5$parameter, adf_result6$parameter)
 )
 
 # Print the summary table using kable
@@ -185,7 +191,104 @@ From Table 3, the log returns of each coin very small p-values indicating we can
 
 ## ARIMA Model Fit
 
+In order to model the volatility of Bitcoin, we looked at the ACF and PACF of the log returns in addition to the ACF and PACF of the $log$ $returns^2$. As seen in Figure 4, the PACF of the $log$ $returns^2$ shows characteristics of volatility clustering. This indicated that a GARCH(p,q) model would be the best choice to model Bitcoin's volatility.
+
+### Figure 4
+```{r, echo=FALSE}
+
+par(mfrow = c(2,2))
+acf(ts(diff(log(bitcoin$Close)), start = c(2017,1), end = c(2023,12), frequency = 365),
+    main = "Bitcoin Log Returns ACF")
+pacf(ts(diff(log(bitcoin$Close)), start = c(2017,1), end = c(2023,12), frequency = 365),
+     main = "Bitcoin Log Returns PACF")
+acf(ts(diff(log(bitcoin$Close))^2, start = c(2017,1), end = c(2023,12), frequency = 365),
+    main = "Bitcoin Log Returns Squared ACF")
+pacf(ts(diff(log(bitcoin$Close))^2, start = c(2017,1), end = c(2023,12), frequency = 365),
+     main = "Bitcoin Log Returns Squared PACF")
+
+```
+
+
+Next, we fit an ARIMA(3,0,3) model to the $log$ $returns^2$ in order to obtain the parameters for our GARCH(p,q) model. Since the best model fitted by lowest AIC to the $log$ $returns^2$ was an ARIMA(3,0,3), we then compared the AIC values of 3 GARCH models: GARCH(1,3), GARCH(2,3), and GARCH(3,3). The AIC values of these models can be seen in Table 4.
+
+
+
+```{r, include=FALSE}
+
+# returns_arma <- auto.arima(ts(diff(log(bitcoin$Close)))^2, max.p = 5, max.q = 5, 
+#                   max.order = 10, stationary = T, 
+#                   seasonal = F, trace = T, stepwise = F, 
+#                   approximation = F)
+
+
+# Fit ARMA(3,0,3) model
+arma_model <- arima(ts(diff(log(bitcoin$Close)))^2, order=c(3,0,3))
+
+# Define GARCH model 
+garch_fit1 <- garchFit(~garch(1, 3), data = ts(diff(log(bitcoin$Close))))
+
+garch_fit2 <- garchFit(~garch(2, 3), 
+                        data = ts(diff(log(bitcoin$Close))))
+garch_fit3 <- garchFit(~garch(3, 3), 
+                        data = ts(diff(log(bitcoin$Close))))
+
+
+garch_sum1 <- summary(garch_fit1)
+garch_sum2 <- summary(garch_fit2)
+garch_sum3 <- summary(garch_fit3)
+
+
+
+ic_values <- c(garch_sum1$ics[1], garch_sum2$ics[1], garch_sum3$ics[1])
+
+
+```
+
+```{r, echo=FALSE}
+
+
+
+# Create a data frame
+ic_table <- data.frame(
+  Model = c("GARCH(1,3)", "GARCH(2,3)", "GARCH(3,3)"),
+  `Information Criterion` = ic_values
+)
+
+# Print the table
+knitr::kable(ic_table, caption = "First Information Criteria for GARCH Models", align = "c")
+```
+
 ## Vector AR Analysis
+
+We wanted to measure Bitcoin's affect on the Ethereum and BNB, and a method to assess this hypothesis is to build a Vector Autoregressive model. We performed VAR selection which provided a VAR(1) model to assess Bitcoin's affect on the other 2 crypto coins. We then used Granger Causality to check the statistical significance of Bitoin's affect on them.
+
+```{r, echo=FALSE}
+
+bitcoin_close <- ts(log(bitcoin$Close), start = c(2017,1), end = c(2023,12), frequency = 365)
+bnb_close <- ts(log(bnb$close), start = c(2017, 1), end = c(2023,12), frequency = 365)
+ethereum_close <- ts(log(ethereum$close), start = c(2017, 1), end = c(2023,12), frequency = 365)
+
+time1 <- time(ts(start = c(2017, 1), end = c(2023, 12), frequency = 365))
+
+bitcoin_lm_fit <- lm(diff(bitcoin_close) ~ diff(time1), data = bitcoin)
+bitcoin_detrend <- diff(bitcoin_close) - fitted(bitcoin_lm_fit)
+
+
+
+bnb_lm_fit <- lm(diff(bnb_close) ~ diff(time1), data = bnb)
+bnb_detrend <- diff(bnb_close) - fitted(bnb_lm_fit)
+
+ether_lm_fit <- lm(diff(ethereum_close) ~ diff(time1), data = ethereum)
+ether_detrend <- diff(ethereum_close) - fitted(ether_lm_fit)
+
+detrend_crypto <- data.frame(bitcoin_detrend, bnb_detrend, ether_detrend)
+
+var_analysis <- VARselect(detrend_crypto, type = "none")
+
+
+
+knitr::kable(var_analysis$selection, caption = "VAR Selection", align = "c")
+```
 
 ## Diagnostics
 
