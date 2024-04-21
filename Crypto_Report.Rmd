@@ -37,9 +37,9 @@ Within this report, we used daily cryptocurrency data to analyze Bitcoin's volat
 
 # Introduction
 
-The cryptocurrency market burst onto the scene in 2013, however it first appeared in 2009 when Bitcoin was created. Bitcoin has seen an incredible period of growth of growth over the past 10 years growing from approximately 300 USD to hitting its all time high just above 70,000 USD. Bitcoin is the largest coin and it is not particulary close. With a market cap of 1.3 trillion USD, the next closest coin is Ethereum with a market cap of 357.8 billion USD and Binance coin being 4th with a market cap of 80.8 billion USD, (per https://www.coinbase.com/explore as of 4/18). Bitcoin being substantially larger than all of the other coins led, while making up 57% of the market led us to believe that other coins performance are dependent on Bitcoin's performance as the leader. 
+The cryptocurrency market burst onto the scene in 2013, however it first appeared in 2009 when Bitcoin was created. Bitcoin has seen an incredible period of growth of growth over the past 10 years growing from approximately 300 USD to hitting its all time high just above 70,000 USD. Bitcoin is the largest coin and it is not particulary close. With a market cap of 1.3 trillion USD, the next closest coin is Ethereum with a market cap of 357.8 billion USD and Binance coin being 4th with a market cap of 80.8 billion USD, (per https://www.coinbase.com/explore as of 4/18). Bitcoin, being substantially larger than all of the other coins led making up 57% of the market, led us to believe that other coins performance are dependent on Bitcoin's performance as the leader. 
 
-It should be noted that Bitcoin is known as a storage of value coin with a finite supply whereas Ethereum abd BNB can be mined unlimitedly and can have an infinite amount of supply. It is possible this aspect of Bitcoin is a large factor in its growth and popularity. 
+It should be noted that Bitcoin is known as a storage of value coin with a finite supply whereas Ethereum and BNB can be mined unlimitedly and can have an infinite amount of supply. It is possible this aspect of Bitcoin is a large factor in its growth and popularity. 
 
 The cryptocurrency market is now mainstream, but the market itself has some interesting characteristics. It is opens at 12am and closes at 11:59pm and weekends. This means that the market is available 24/7, not just within standard trading hours. Bitcoin's rise, as quick as it's been, has not been linear. It is wildly volatile and ever changing due to how the market is setup. For this reason, we will analyze Bitcoin's returns and attempt to forecast its volatility.
 
@@ -135,8 +135,8 @@ adf_result3 <- adf.test(ts(log(bnb$close), start = c(2017,1), end = c(2023,12), 
 # Create a summary table
 summary_table <- data.frame(
   Coin = c("Bitcoin", "Ethereum", "BNB"),
-  `Test Statistic` = c(adf_result1$statistic, adf_result2$statistic, adf_result3$statistic),
-  p_value = c(adf_result1$p.value, adf_result2$p.value, adf_result3$p.value),
+  `Test Statistic` = c(round(adf_result1$statistic, 3), round(adf_result2$statistic, 3), round(adf_result3$statistic,3)),
+  p_value = c(round(adf_result1$p.value,3), round(adf_result2$p.value,3), round(adf_result3$p.value,3)),
   `Lag Used` = c(adf_result1$parameter, adf_result2$parameter, adf_result3$parameter)
 
 )
@@ -148,7 +148,7 @@ knitr::kable(summary_table, align = "c", caption = "Summary of Augmented Dickey-
 ```
 
 
-The Augmented Dickey-Fuller test confirmed what we believed from Figure 2. We failed to reject our null hypothesis, indicating we do not have sufficient evidence to say the log transformation of Bitcoin and Ethereum are stationary. Interestingly, we can see the p-value of BNB is 0.01 indicating this time series is stationary in the log transformed form.
+The Augmented Dickey-Fuller test confirmed what we believed from Figure 2. We failed to reject our null hypothesis, indicating we do not have sufficient evidence to say the log transformation of Bitcoin and Ethereum are stationary. Interestingly, we can see the p-value of BNB is 0.010 indicating this time series is stationary in the log transformed form.
 
 In order to transform these crypto coins into stationary time series, we differenced them by a single lag. This is also the same as saying, we computed the log returns of Bitcoin, Ethereum, and BNB. We are noting BNB was statistically significant to be stationary in the log transformed form, however we still took a difference by a single lag.
 
@@ -184,8 +184,8 @@ adf_result6 <- adf.test(ts(diff(log(bnb$close)), start = c(2017,1), end = c(2023
 # Create a summary table
 summary_table <- data.frame(
   Coin = c("Bitcoin", "Ethereum", "BNB"),
-  `Test Statistic` = c(adf_result4$statistic, adf_result5$statistic, adf_result6$statistic),
-  `p_value` = c(adf_result4$p.value, adf_result5$p.value, adf_result6$p.value),
+  `Test Statistic` = c(round(adf_result4$statistic,3), round(adf_result5$statistic,3), round(adf_result6$statistic,3)),
+  `p_value` = c(round(adf_result4$p.value,3), round(adf_result5$p.value,3), round(adf_result6$p.value,3)),
   `Lag Used` = c(adf_result4$parameter, adf_result5$parameter, adf_result6$parameter)
 )
 
@@ -196,7 +196,7 @@ knitr::kable(summary_table, align = "c", caption = "Summary of Augmented Dickey-
 ```
 
 
-From Table 3, the log returns of each coin very small p-values indicating we can reject our null hypothesis. We do have sufficient evidence that our log returns are stationary.
+From Table 3, the log returns of each coin very small p-values indicating we can reject our null hypothesis. We do have sufficient evidence that our log returns are now stationary after differencing. 
 
 ## ARIMA Model Fit
 
@@ -260,7 +260,7 @@ ic_values <- c(garch_sum1$ics[1], garch_sum2$ics[1], garch_sum3$ics[1])
 # Create a data frame
 ic_table <- data.frame(
   Model = c("GARCH(1,3)", "GARCH(2,3)", "GARCH(3,3)"),
-  `Information Criterion` = ic_values
+  `Information Criterion` = round(ic_values,4)
 )
 
 # Print the table
@@ -350,7 +350,7 @@ plot(garch_fit1, which = 7)
 
 # Results
 
-Our goal was to forecast Bitcoin's log returns for the first 10 days of January 2024. Overall, the model's forecast stayed close to 0. The confidence intervals of the forecast were inline with what was previously seen in the real data. Our forecast does indicate that volatility may slightly increase over those 10 days but not drastically, as seen in Figure 8. As mentioned in the diagnostics, the residuals of this model were not normal, which means there is potentenially better way to forecast Bitcoin's volatility. When assessing the model fit, our Jarque-Bera and Shapiro Wilks normality test for the standardized residuals were close to 0 meaning we rejected our null hypothesis and we had sufficient evidence to say they were not normal.
+Our goal was to forecast Bitcoin's log returns for the first 10 days of January 2024. Overall, the model's forecast stayed close to 0. The confidence intervals of the forecast were inline with what was previously seen in the real data. Our forecast does indicate that volatility may slightly increase over those 10 days but not drastically, as seen in Figure 8. As mentioned in the diagnostics, the residuals of this model were not normal, which means there is potentially better way to forecast Bitcoin's volatility. When assessing the model fit, our Jarque-Bera and Shapiro Wilks normality test for the standardized residuals were close to 0 meaning we rejected our null hypothesis and we had sufficient evidence to say they were not normal.
 
 ### Figure 8
 ```{r, echo=FALSE}
@@ -379,7 +379,8 @@ test_statistics <- granger_test1$Granger$statistic
 p_values <- granger_test1$Granger$p.value
 
 # Combine into a data frame
-test_results <- data.frame(Test_Statistic = test_statistics, P_Value = p_values)
+test_results <- data.frame(Test_Statistic = round(test_statistics,3), 
+                           P_Value = round(p_values,3))
 
 # Display results in a table
 knitr::kable(test_results, caption = "Granger Causality Test Results", align = "c")
