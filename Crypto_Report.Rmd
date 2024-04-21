@@ -31,27 +31,29 @@ ethereum <- smaller_crypto %>%
 
 ```
 
-# Executive Summary
+# Executive Summary {-}
 
-Within this report, we used daily cryptocurrency data to analyze Bitcoin's volatility within its log returns. We also looked at the affects of Bitcoin's volatility and its impact on the volatility of other cryptocurrencies such as Ethereum and Binance Coin. In order to measure and forecast Bitcoin's daily volatility, we built a GARCH(1,3) model, which produced poor forecasts at, or near 0 daily log returns for the first 10 days of January 2024. When analyzing Bitcoin's impact on Ethereum and BNB, we found no Granger Causality using a VAR(1) model on the log returns of the 3 coins.
+Within this report, we used daily cryptocurrency data to analyze Bitcoin's volatility within its log returns. The frame frame of our analysis is July of 2017 to December 31st, 2023. We also looked at the affects of Bitcoin's volatility and its impact on the volatility of other cryptocurrencies such as Ethereum and Binance Coin. In order to measure and forecast Bitcoin's daily volatility, we built a GARCH(1,3) model, which produced poor forecasts at, or near 0 daily log returns for the first 10 days of January 2024. When analyzing Bitcoin's impact on Ethereum and BNB, we found no Granger Causality using a VAR(1) model on the log returns of the 3 coins. Areas to take into account for future work include separating utility coins and storage of value coins, including possible confounding variables like market cap and trading volume and to analyze Bitcoin's instanteous causlilty compared to its Granger causality. 
 
 # Introduction
 
-The cryptocurrency market burst onto the scene in 2013, however it first appeared in 2009 when Bitcoin was created. Bitcoin has seen an incredible period of growth of growth over the past 10 years growing from approximately 300 USD to hitting its all time high just above 70,000 USD. Bitcoin is the largest coin and it is not particulary close. With a market cap of 1.3 trillion USD, the next closest coin is Ethereum with a market cap of 357.8 billion USD and Binance coin being 4th with a market cap of 80.8 billion USD, (per https://www.coinbase.com/explore as of 4/18). 
+The cryptocurrency market burst onto the scene in 2013, however it first appeared in 2009 when Bitcoin was created. Bitcoin has seen an incredible period of growth of growth over the past 10 years growing from approximately 300 USD to hitting its all time high just above 70,000 USD. Bitcoin is the largest coin and it is not particulary close. With a market cap of 1.3 trillion USD, the next closest coin is Ethereum with a market cap of 357.8 billion USD and Binance coin being 4th with a market cap of 80.8 billion USD, (per https://www.coinbase.com/explore as of 4/18). Bitcoin being substantially larger than all of the other coins led, while making up 57% of the market led us to believe that other coins performance are dependent on Bitcoin's performance as the leader. 
+
+It should be noted that Bitcoin is known as a storage of value coin with a finite supply whereas Ethereum abd BNB can be mined unlimitedly and can have an infinite amount of supply. It is possible this aspect of Bitcoin is a large factor in its growth and popularity. 
 
 The cryptocurrency market is now mainstream, but the market itself has some interesting characteristics. It is opens at 12am and closes at 11:59pm and weekends. This means that the market is available 24/7, not just within standard trading hours. Bitcoin's rise, as quick as it's been, has not been linear. It is wildly volatile and ever changing due to how the market is setup. For this reason, we will analyze Bitcoin's returns and attempt to forecast its volatility.
 
-Over this time Bitcoin has been known as the bellweather cryptocurrency, meaning if Bitcoin is rising, then most other coins are rising and vice versa for when Bitcoin decreases. We investigated if this is real or just an illusion to investors.
+  Over this time Bitcoin has been known as the bellweather cryptocurrency, meaning if Bitcoin is rising, then most other coins are rising and vice versa for when Bitcoin decreases. We investigated if this is real or just an illusion to investors.
 
 # Methodology
 
 ## Data
 
-The data was obtained using the crypto2 package in R. This package pulls daily cryptocurrency data from coinmarketcap.com. Our Bitcoin data consists of daily prices from January 2015 to March 27th, 2024. We also pulled data for Ethereum from its creation in August 2015 to March 27th, 2024. The last cryptocurrency we looked at is Binance Coin (BNB). For BNB, we pulled data from its creation in July 2017 to March 27th, 2024. 
+  The data was obtained using the crypto2 package in R. This package pulls daily cryptocurrency data from coinmarketcap.com. Our Bitcoin data consists of daily prices from January 2015 to March 27th, 2024. We also pulled data for Ethereum from its creation in August 2015 to March 27th, 2024. The last cryptocurrency we looked at is Binance Coin (BNB). For BNB, we pulled data from its creation in July 2017 to March 27th, 2024. 
 
-Before doing analysis on these time series, we filtered the data so that all 3 coins had the same starting month and ending day. In this case, the data we analyzed was from July 1st, 2017 to Decemeber 31st, 2023. 
+  Before doing analysis on these time series, we filtered the data so that all 3 coins had the same starting month and ending day. In this case, the data we analyzed was from July 1st, 2017 to Decemeber 31st, 2023. 
 
-Each of these datsets contain the same variables with can be seen in the table below.
+  Each of these datsets contain the same variables with can be seen in the table below.
 
 
 ```{r, echo=FALSE}
@@ -75,10 +77,13 @@ knitr::kable(head(bitcoin_head), caption = "Cryptocurrency Dataset", align = "c"
 
 ## EDA
 
-First, we plotted the time series of Bitcoin, Ethereum, and BNB. 
+First, we plotted the time series of Bitcoin, Ethereum, and BNB. From this Figure 1 we can see that Bitcoin is not stationary. Bitcoin daily close price has an upward trend indicating an increasing mean and non-constant variance. We also notice that the Ethereum close price and BNB close price are difficult to see any trends or price fluctuations because of the large difference in price with Bitcoin. 
+
+Due to Bitcoin's non-stationary characteristics and the inability to see characteristics in the Ethereum and BNB time series, we took the log transformation as seen in Figure 2.
+
 
 ### Figure 1
-```{r, echo=FALSE, warning=FALSE}
+```{r, echo=FALSE, warning=FALSE, fig.width=7, fig.height=4}
 
 plot(ts(bitcoin$Close, start = c(2017,1), end = c(2023,12), frequency = 365), 
      main = "Cryptocurrency Daily Close Price 2017-2023",
@@ -89,14 +94,18 @@ lines(ts(ethereum$close, start = c(2017, 1), end = c(2023,12), frequency = 365),
 legend("topleft", 
        legend = c("Bitcoin", "BNB", "Ethereum"), 
        col = c("black", "skyblue", "red"), lty = 1)
+
+
+
 ```
 
-From this plot we can see that Bitcoin is not stationary. Bitcoin daily close price has an upward trend indicating an increasing mean and non-constant variance. We also notice that the Ethereum close price and BNB close price are difficult to see any trends or price fluctuations because of the large difference in price with Bitcoin. 
 
-Due to Bitcoin's non-stationary characteristics and the inability to see characteristics in the Ethereum and BNB time series, we took the log transformation as seen in the plot below.
+
+
+
 
 ### Figure 2
-```{r, echo=FALSE, warning=FALSE}
+```{r, echo=FALSE, warning=FALSE, fig.width=7, fig.height=4}
 
 plot(ts(log(bitcoin$Close), start = c(2017,1), end = c(2023,12), frequency = 365), 
      main = "Crytpocurrency Daily Log Close Price 2017-2023",
@@ -285,17 +294,96 @@ detrend_crypto <- data.frame(bitcoin_detrend, bnb_detrend, ether_detrend)
 
 var_analysis <- VARselect(detrend_crypto, type = "none")
 
-
+crypto_var <- VAR(detrend_crypto, type = "none", p = 1)
 
 knitr::kable(var_analysis$selection, caption = "VAR Selection", align = "c")
 ```
 
 ## Diagnostics
 
+To assess the ARMA(3,3) model on the squared log returns, we looked at the ACF and PACF, as well as performing Shaprio Wilks and Jarque-Bera normality test. As seen in Figure 5, there are no significant lags in either of the ACF or PACF of the residuals meaning this is a good model fit to our data. The squared residuals of the ARMA(3,3) in Figure 10 in the appendix also suggest that these $p = 3$ is an appropriate parameter to fit for our GARCH model. In Figure 6, we can see the QQ plot of the ARMA(3,3) residuals. It appears that the model fits decently well, however there is an extreme outlier which increases the kurtosis of the tails. 
+
+### Figure 5
+
+```{r, echo=FALSE}
+
+arma_model <- arima(diff(bitcoin_close)^2, order=c(3,0,3))
+
+#summary(arma_model)
+
+residuals_arma <- residuals(arma_model)
+par(mfrow=c(2,2))
+acf(residuals_arma, main = "ARMA(3,3) Residuals ACF")
+pacf(residuals_arma, main = "ARMA(3,3) Residuals PACF")
+
+
+
+# Squared residuals
+#squared_residuals <- residuals_arma^2
+
+# # ACF and PACF plots
+# acf_sqr_residuals <- acf(squared_residuals, main = "ACF of Log Returns Squared Residuals")
+# pacf_sqr_residuals <- pacf(squared_residuals, main = "PACF of Log Returns Squared Residuals")
+
+
+```
+
+### Figure 6
+```{r, echo=FALSE, fig.width=4, fig.height=5}
+
+qqnorm(residuals_arma)
+qqline(residuals_arma, col = 2)
+
+```
+
+
+Next, we looked at the residuals of the GARCH(1,3) model to assess its fit on Bitcoin's daily log returns. We used the same process as we did for the ARMA(3,3) model. First, we looked at the conditional standard deviation of the GARCH(1,3) model as well as the plot of the residuals. Here, we can see that the conditional standard deviation is able to identify volatility clusters within Bitcoins log returns, and the residuals of the model look to be stationary, with mean approximately 0. Figure 11 in the appendix shows the ACF and PACF of the standardized residuals as well as the QQ plot for the standardized residuals. From the QQ plot, we see that the standardized residuals are not normal as they have heavy tails. In the ACF and PACF of the standardized residuals, we can see significant lags indicating autocorrelation in the residuals. We checked our visual assessment of the normality of the residuals using the Shapiro Wilks and Jarque-Bera normality tests. 
+
+### Figure 7
+
+```{r, echo=FALSE}
+par(mfrow=c(1,2))
+plot(garch_fit1, which = 2)
+plot(garch_fit1, which = 7)
+
+```
 
 # Results
 
+Our goal was to forecast Bitcoin's log returns for the first 10 days of January 2024. Overall, the model's forecast stayed close to 0. The confidence intervals of the forecast were inline with what was previously seen in the real data. Our forecast does indicate that volatility may slightly increase over those 10 days but not drastically, as seen in Figure 8. As mentioned in the diagnostics, the residuals of this model were not normal, which means there is potentenially better way to forecast Bitcoin's volatility. When assessing the model fit, our Jarque-Bera and Shapiro Wilks normality test for the standardized residuals were close to 0 meaning we rejected our null hypothesis and we had sufficient evidence to say they were not normal.
 
+### Figure 8
+```{r, echo=FALSE}
+arma_garch <- ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 3)), 
+                      mean.model = list(armaOrder = c(0, 0), include.mean = FALSE), 
+                      distribution.model = "norm")
+
+model_fit <- ugarchfit(spec = arma_garch, data = ts(diff(bitcoin_close)), out.sample = 200)
+
+
+model_forecast = ugarchforecast(model_fit, data = ts(diff(bitcoin_close)), n.ahead = 10, n.roll = 10)
+plot(model_forecast, which = "all")
+
+```
+
+
+To address Bitcoin's impact, on Ethereum and BNB, we used a VAR(1) and then used this model to make a Granger Causal inference about its impact. From this model we reported a p-value of 0.4 meaning that we failed to reject our null hypthoesis and we did not have sufficient evidence to suggest Bitcoin was Granger Causal of Ethereum or BNB. 
+
+```{r, echo=FALSE}
+
+# Granger Causality Test
+granger_test1 <- causality(crypto_var, cause = "bitcoin_detrend")
+
+# Extract test statistics and p-values
+test_statistics <- granger_test1$Granger$statistic
+p_values <- granger_test1$Granger$p.value
+
+# Combine into a data frame
+test_results <- data.frame(Test_Statistic = test_statistics, P_Value = p_values)
+
+# Display results in a table
+knitr::kable(test_results, caption = "Granger Causality Test Results", align = "c")
+```
 
 # Discussion
 
@@ -306,10 +394,18 @@ Another takeaway from analyzing Bitcoin's volatility would be to look at shorten
 When analyzing the impact of Bitcoin's impact on Ethereum and BNB, we concluded that Bitcoin was not Granger Causal of the other coins. In post presentation discussion, it was noted that something to look at would be the instantaneous causality of the covariance matrix between the 3 coins, with the hypothesis being that Bitcoin would instantaneously causal of the other 2 coins. This would be an area of future work. While not necessarily surprising that Bitcoin was not Granger Casual of the other coin's, Bitcoin likely still has affects on other cryptocurrencies as it makes up 57% of the market (per per https://www.coinbase.com/explore). There are likely other confounding factors that led to this such as trading volume, market cap, and cryptocurrency sentiment. Information that could be useful is that Bitcoin is considered a storage of value coin whereas Ethereum and BNB are considered utility coins. Future work could be grouping storage of values coins together and utility coins together and analyzing how coins in those groups impact each other.
 
 
-# Appendix
 
+# Github with Code
+
+https://github.com/dbasley/Cryptocurrency_Forecast/tree/main
+
+
+
+# Appendix {-}
+
+### Figure 8
 ### ACF and PACF plots of Bitcoin's Daily Close Price
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=7, fig.height=4}
 
 par(mfrow=c(1,2))
 acf(bitcoin$Close, lag.max = 2000, main= "ACF plot of bitcoin")
@@ -318,8 +414,9 @@ pacf(bitcoin$Close, lag = 2000, main="PACF plot of bitcoin")
 
 ```
 
+### Figure 9
 ### Bitcoin's current price against its previous day price
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=6, fig.height=4}
 
 plot(y = bitcoin_close,x = lag(as.vector(bitcoin_close)),
      ylab = "Daily Close Price",
@@ -327,4 +424,59 @@ plot(y = bitcoin_close,x = lag(as.vector(bitcoin_close)),
      main = "Bitcoin Close Price vs Previous Close Price")
 
 
+```
+
+### Figure 10
+### Bitcoin Log Returns Squared Residuals
+
+```{r, echo=FALSE, fig.width=7, fig.height=6}
+
+# Squared residuals
+squared_residuals <- residuals_arma^2
+par(mfrow=c(2,2))
+# ACF and PACF plots
+acf_sqr_residuals <- acf(squared_residuals, main = "ACF of Log Returns Squared Residuals")
+pacf_sqr_residuals <- pacf(squared_residuals, main = "PACF of Log Returns Squared Residuals")
+
+
+
+```
+
+
+### Figure 11
+### GARCH(1,3) Standardized Residual Plots
+```{r, echo=FALSE}
+# Extract standardized residuals
+std_resid <- residuals(garch_fit1, standardize = TRUE)
+
+
+# ACF and PACF of standardized residuals
+par(mfrow=c(1,2))
+acf(std_resid, main="ACF of Standardized Residuals")
+pacf(std_resid, main="PACF of Standardized Residuals")
+
+
+# QQplot of standardized residuals
+qqnorm(std_resid)
+qqline(std_resid, col = 2)
+
+
+```
+
+
+### Figure 12
+### GARCH(1,3) SD on Actual Data
+```{r, echo = FALSE, fig.width=7, fig.height=4}
+std_t <- garch_fit1@sigma.t
+
+
+plot(ts(diff(bitcoin_close)), main = "GARCH(1,3) SD on Bitcoin Log Returns",
+     ylab = "Bitcoin Log Return")
+lines(std_t, col = "orange", pch = 30)
+
+```
+
+
+
+```{r ref.label=knitr::all_labels(), echo = T, eval = F}
 ```
